@@ -415,7 +415,26 @@
                     alertMessage = `${formsText} ${group.sessionName} 尚餘 ${group.message}`;
                 }
                 
-                addAlert(alertMessage, group.type);
+                // 準備相關年級信息用於後續停止閃爍
+                const relatedForms = [];
+                const forms = ['form1', 'form2', 'form3'];
+                const formNames = ['中一', '中二', '中三'];
+                const sessions = ['Session1', 'Session2'];
+                const sessionNames = ['第一節', '第二節'];
+                
+                group.forms.forEach(formName => {
+                    const formIndex = formNames.indexOf(formName);
+                    const sessionIndex = sessionNames.indexOf(group.sessionName);
+                    if (formIndex !== -1 && sessionIndex !== -1) {
+                        relatedForms.push({
+                            form: forms[formIndex],
+                            session: sessions[sessionIndex],
+                            sessionIndex: sessionIndex
+                        });
+                    }
+                });
+                
+                addAlert(alertMessage, group.type, relatedForms);
             });
         }
 
@@ -469,12 +488,10 @@
                 
                 // 根據年級順序添加對應的語音文件
                 const formOrder = ['中一', '中二', '中三'];
-                let audioIndex = 1;
                 
-                formOrder.forEach(form => {
+                formOrder.forEach((form, index) => {
                     if (forms.includes(form)) {
-                        audioFiles.push(`./voice/S${audioIndex}.mp3`);
-                        audioIndex++;
+                        audioFiles.push(`./voice/S${index + 1}.mp3`);
                     }
                 });
                 
@@ -529,7 +546,7 @@
             });
         }
 
-        function addAlert(message, type = 'info') {
+        function addAlert(message, type = 'info', relatedForms = []) {
             const alertsList = document.getElementById('alertsList');
             const placeholder = alertsList.querySelector('div');
             if (placeholder && placeholder.textContent.includes('暫無提醒')) {
@@ -544,20 +561,102 @@
                 'bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-800 dark:text-slate-200';
             
             alertDiv.className = `p-4 border-2 ${alertClass} transition-all`;
+            
+            // 創建基本HTML結構（不包含倒數計時）
             alertDiv.innerHTML = `
                 <div class="flex justify-between items-start">
                     <div>
                         <div class="font-bold text-lg">${message}</div>
                         <div class="text-sm opacity-75 mt-1">${formatTime(getHongKongTime())}</div>
                     </div>
-                    <button onclick="this.parentElement.parentElement.remove()" class="text-xl opacity-70 hover:opacity-100 font-bold ml-4 hover:bg-white hover:bg-opacity-20 w-8 h-8 flex items-center justify-center transition-all">×</button>
+                    <button onclick="removeAlert(this)" class="text-xl opacity-70 hover:opacity-100 font-bold ml-4 hover:bg-white hover:bg-opacity-20 w-8 h-8 flex items-center justify-center transition-all">×</button>
                 </div>
             `;
             
+            // 存儲相關的年級和節次信息
+            alertDiv.dataset.relatedForms = JSON.stringify(relatedForms);
+            
             alertsList.insertBefore(alertDiv, alertsList.firstChild);
+            
+            // 1分鐘倒數計時器
+            let countdown = 60;
+            const countdownTimer = setInterval(() => {
+                countdown--;
+                
+                // 當剩餘時間少於等於10秒時，顯示倒數計時
+                const messageElement = alertDiv.querySelector('.font-bold');
+                if (messageElement) {
+                    if (countdown <= 10 && countdown > 0) {
+                        // 顯示倒數計時
+                        messageElement.innerHTML = `${message} <span class="countdown-timer text-xs opacity-60 ml-2">(${countdown}s)</span>`;
+                    } else if (countdown > 10) {
+                        // 不顯示倒數計時
+                        messageElement.innerHTML = message;
+                    }
+                }
+                
+                if (countdown <= 0) {
+                    clearInterval(countdownTimer);
+                    removeAlert(alertDiv.querySelector('button'), true);
+                }
+            }, 1000);
+            
+            // 存儲計時器ID以便手動刪除時清除
+            alertDiv.dataset.timerId = countdownTimer;
             
             // 播放對應的語音提醒
             playAudioSequence(message);
+        }
+        
+        function removeAlert(buttonOrElement, isAutoRemove = false) {
+            let alertDiv;
+            if (buttonOrElement.tagName === 'BUTTON') {
+                alertDiv = buttonOrElement.parentElement.parentElement;
+            } else {
+                alertDiv = buttonOrElement;
+            }
+            
+            // 清除計時器
+            if (alertDiv.dataset.timerId) {
+                clearInterval(parseInt(alertDiv.dataset.timerId));
+            }
+            
+            // 如果是自動刪除，需要停止相關年級的閃爍效果
+            if (isAutoRemove && alertDiv.dataset.relatedForms) {
+                try {
+                    const relatedForms = JSON.parse(alertDiv.dataset.relatedForms);
+                    relatedForms.forEach(formInfo => {
+                        const container = document.getElementById(`${formInfo.form}${formInfo.session}`);
+                        if (container) {
+                            // 重新計算當前時間狀態
+                            const endTimeInput = document.getElementById(`${formInfo.form}End${formInfo.sessionIndex + 1}`);
+                            const timeRemaining = calculateTimeRemaining(endTimeInput.value);
+                            
+                            if (timeRemaining && !timeRemaining.ended) {
+                                // 重新設定正確的樣式（不閃爍）
+                                let className = 'py-3 px-4 border-2 transition-all border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700';
+                                container.className = className;
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.error('解析相關年級信息失敗:', e);
+                }
+            }
+            
+            // 移除提醒元素
+            alertDiv.remove();
+            
+            // 如果沒有提醒了，顯示預設訊息
+            const alertsList = document.getElementById('alertsList');
+            if (alertsList.children.length === 0) {
+                alertsList.innerHTML = `
+                    <div class="text-center py-8 text-slate-500 dark:text-slate-400">
+                        <div class="text-lg font-semibold">暫無提醒</div>
+                        <div class="text-sm mt-1">NO ALERTS</div>
+                    </div>
+                `;
+            }
         }
 
         function updateDisplay() {
@@ -628,6 +727,7 @@
         document.querySelectorAll('input[type="time"]').forEach(input => {
             input.addEventListener('change', () => {
                 alertHistory.clear(); // 重置提醒歷史
+                timeAlertHistory.clear(); // 重置時間提醒歷史
                 updateDisplay();
             });
         });
@@ -640,7 +740,7 @@
             const sessionNames = ['第一節', '第二節'];
             
             // 檢查的特定分鐘數
-            const specificMinutes = [15, 5];
+            const specificMinutes = [15, 5, 0];
             
             specificMinutes.forEach(targetMinutes => {
                 const formsAtTime = [];
@@ -651,13 +751,23 @@
                         const endTime = endTimeInput.value;
                         const timeRemaining = calculateTimeRemaining(endTime);
                         
-                        if (!timeRemaining || timeRemaining.ended) return;
+                        if (!timeRemaining) return;
                         
-                        // 檢查是否剛好等於目標分鐘數（允許2秒誤差）
-                        const totalMinutes = Math.floor(timeRemaining.totalSeconds / 60);
-                        const seconds = timeRemaining.totalSeconds % 60;
+                        let shouldTrigger = false;
                         
-                        if (totalMinutes === targetMinutes && seconds <= 2) {
+                        if (targetMinutes === 0) {
+                            // 檢查是否剛好結束（剩餘時間為0）
+                            shouldTrigger = timeRemaining.ended;
+                        } else {
+                            // 檢查是否剛好等於目標分鐘數（允許2秒誤差）
+                            if (!timeRemaining.ended) {
+                                const totalMinutes = Math.floor(timeRemaining.totalSeconds / 60);
+                                const seconds = timeRemaining.totalSeconds % 60;
+                                shouldTrigger = (totalMinutes === targetMinutes && seconds <= 2);
+                            }
+                        }
+                        
+                        if (shouldTrigger) {
                             const formKey = `${formNames[formIndex]}-${sessionNames[sessionIndex]}`;
                             if (!formsAtTime.some(item => item.form === formNames[formIndex])) {
                                 formsAtTime.push({
@@ -678,7 +788,7 @@
                         timeAlertHistory.add(timeAlertKey);
                         const formsList = formsAtTime.map(f => f.form);
                         playTimeAlertSequence(formsList, targetMinutes);
-                        console.log(`觸發時間提醒: ${formsList.join(' ')} ${targetMinutes}分鐘`);
+                        console.log(`觸發時間提醒: ${formsList.join(' ')} ${targetMinutes === 0 ? '考試結束' : targetMinutes + '分鐘'}`);
                     }
                 }
             });
