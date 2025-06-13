@@ -478,10 +478,14 @@
                     }
                 });
                 
-                // 添加時間語音文件
-                audioFiles.push(`./voice/${minutes}mins.mp3`);
+                // 根據分鐘數添加對應的語音文件
+                if (minutes === 0) {
+                    audioFiles.push('./voice/end.mp3');
+                } else {
+                    audioFiles.push(`./voice/${minutes}mins.mp3`);
+                }
                 
-                console.log(`播放時間提醒語音: ${forms.join(' ')} ${minutes}分鐘`, audioFiles);
+                console.log(`播放時間提醒語音: ${forms.join(' ')} ${minutes === 0 ? '考試結束' : minutes + '分鐘'}`, audioFiles);
                 
                 // 播放兩次完整序列
                 for (let round = 0; round < 2; round++) {
