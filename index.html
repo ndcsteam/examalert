@@ -122,6 +122,107 @@
             text-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
         }
         
+        /* Time Input Display */
+        .time-input-display {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .time-input-display:hover {
+            background-color: #F1F5F9;
+            border-color: #1E3A8A;
+        }
+        
+        .dark .time-input-display:hover {
+            background-color: #475569;
+            border-color: #3B82F6;
+        }
+        
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.3s ease;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .dark .modal-content {
+            background: #1e293b;
+            border: 1px solid #475569;
+        }
+        
+        .modal-overlay.show .modal-content {
+            transform: scale(1) translateY(0);
+        }
+        
+        /* Time Picker Styles */
+        .time-picker {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            justify-content: center;
+            margin: 1.5rem 0;
+        }
+        
+        .time-input {
+            width: 80px;
+            height: 60px;
+            font-size: 1.5rem;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f8fafc;
+            font-family: monospace;
+            font-weight: bold;
+        }
+        
+        .dark .time-input {
+            background: #374151;
+            border-color: #6b7280;
+            color: white;
+        }
+        
+        .time-input:focus {
+            outline: none;
+            border-color: #1E3A8A;
+            box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+        }
+        
+        .time-separator {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #64748b;
+        }
+        
+        .dark .time-separator {
+            color: #94a3b8;
+        }
+        
         /* Accessibility Improvements */
         @media (prefers-reduced-motion: reduce) {
             .warning-flash,
@@ -133,6 +234,11 @@
             .dark .warning-flash,
             .dark .urgent-flash {
                 background-color: #92400E !important;
+            }
+            
+            .modal-overlay,
+            .modal-content {
+                transition: none;
             }
         }
         
@@ -148,12 +254,32 @@
                 background: white !important;
                 color: black !important;
             }
+            
+            .modal-overlay {
+                display: none !important;
+            }
         }
         
         /* Enhanced Mobile Responsiveness */
         @media (max-width: 640px) {
             .time-display {
                 font-size: 3rem !important;
+            }
+            
+            .modal-content {
+                margin: 1rem;
+                padding: 1.5rem;
+            }
+            
+            .time-picker {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .time-input {
+                width: 100px;
+                height: 50px;
+                font-size: 1.25rem;
             }
         }
         
@@ -206,7 +332,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-[25%_25%_50%] gap-8">
             
             <!-- Time Configuration Panel -->
-            <section class="order-2 lg:order-1" aria-labelledby="config-title">
+            <section class="order-1 lg:order-1" aria-labelledby="config-title">
                 <div class="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-xl rounded-lg">
                     <header class="bg-secondary text-white p-4 border-b-2 border-slate-300 dark:border-slate-600 rounded-t-lg">
                         <h2 id="config-title" class="text-xl font-bold text-center tracking-wide">
@@ -228,29 +354,27 @@
                             </div>
                             
                             <div class="mb-4">
-                                <label for="form1End1" class="text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300 block">
-                                    第一節 SESSION 1
-                                </label>
-                                <input 
-                                    type="time" 
-                                    id="form1End1" 
-                                    class="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-base font-mono focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all rounded"
-                                    aria-describedby="form1End1-desc"
-                                >
-                                <span id="form1End1-desc" class="sr-only">設定中一年級第一節考試結束時間</span>
+                                <div class="text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">第一節 SESSION 1</div>
+                                <div id="form1End1Display" 
+                                     class="py-3 px-4 border-2 border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 transition-all rounded time-input-display" 
+                                     onclick="TimePickerModal.open('form1End1')"
+                                     role="button"
+                                     tabindex="0"
+                                     aria-label="設定中一年級第一節考試結束時間">
+                                    <div class="text-base font-bold font-mono tracking-wider time-display">--:--</div>
+                                </div>
                             </div>
                             
                             <div class="mb-4">
-                                <label for="form1End2" class="text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300 block">
-                                    第二節 SESSION 2
-                                </label>
-                                <input 
-                                    type="time" 
-                                    id="form1End2" 
-                                    class="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-base font-mono focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all rounded"
-                                    aria-describedby="form1End2-desc"
-                                >
-                                <span id="form1End2-desc" class="sr-only">設定中一年級第二節考試結束時間</span>
+                                <div class="text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">第二節 SESSION 2</div>
+                                <div id="form1End2Display" 
+                                     class="py-3 px-4 border-2 border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 transition-all rounded time-input-display" 
+                                     onclick="TimePickerModal.open('form1End2')"
+                                     role="button"
+                                     tabindex="0"
+                                     aria-label="設定中一年級第二節考試結束時間">
+                                    <div class="text-base font-bold font-mono tracking-wider time-display">--:--</div>
+                                </div>
                             </div>
                         </fieldset>
 
@@ -264,29 +388,27 @@
                             </div>
                             
                             <div class="mb-4">
-                                <label for="form2End1" class="text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300 block">
-                                    第一節 SESSION 1
-                                </label>
-                                <input 
-                                    type="time" 
-                                    id="form2End1" 
-                                    class="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-base font-mono focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all rounded"
-                                    aria-describedby="form2End1-desc"
-                                >
-                                <span id="form2End1-desc" class="sr-only">設定中二年級第一節考試結束時間</span>
+                                <div class="text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">第一節 SESSION 1</div>
+                                <div id="form2End1Display" 
+                                     class="py-3 px-4 border-2 border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 transition-all rounded time-input-display" 
+                                     onclick="TimePickerModal.open('form2End1')"
+                                     role="button"
+                                     tabindex="0"
+                                     aria-label="設定中二年級第一節考試結束時間">
+                                    <div class="text-base font-bold font-mono tracking-wider time-display">--:--</div>
+                                </div>
                             </div>
                             
                             <div class="mb-4">
-                                <label for="form2End2" class="text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300 block">
-                                    第二節 SESSION 2
-                                </label>
-                                <input 
-                                    type="time" 
-                                    id="form2End2" 
-                                    class="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-base font-mono focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all rounded"
-                                    aria-describedby="form2End2-desc"
-                                >
-                                <span id="form2End2-desc" class="sr-only">設定中二年級第二節考試結束時間</span>
+                                <div class="text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">第二節 SESSION 2</div>
+                                <div id="form2End2Display" 
+                                     class="py-3 px-4 border-2 border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 transition-all rounded time-input-display" 
+                                     onclick="TimePickerModal.open('form2End2')"
+                                     role="button"
+                                     tabindex="0"
+                                     aria-label="設定中二年級第二節考試結束時間">
+                                    <div class="text-base font-bold font-mono tracking-wider time-display">--:--</div>
+                                </div>
                             </div>
                         </fieldset>
 
@@ -300,29 +422,27 @@
                             </div>
                             
                             <div class="mb-4">
-                                <label for="form3End1" class="text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300 block">
-                                    第一節 SESSION 1
-                                </label>
-                                <input 
-                                    type="time" 
-                                    id="form3End1" 
-                                    class="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-base font-mono focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all rounded"
-                                    aria-describedby="form3End1-desc"
-                                >
-                                <span id="form3End1-desc" class="sr-only">設定中三年級第一節考試結束時間</span>
+                                <div class="text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">第一節 SESSION 1</div>
+                                <div id="form3End1Display" 
+                                     class="py-3 px-4 border-2 border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 transition-all rounded time-input-display" 
+                                     onclick="TimePickerModal.open('form3End1')"
+                                     role="button"
+                                     tabindex="0"
+                                     aria-label="設定中三年級第一節考試結束時間">
+                                    <div class="text-base font-bold font-mono tracking-wider time-display">--:--</div>
+                                </div>
                             </div>
                             
                             <div class="mb-4">
-                                <label for="form3End2" class="text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300 block">
-                                    第二節 SESSION 2
-                                </label>
-                                <input 
-                                    type="time" 
-                                    id="form3End2" 
-                                    class="w-full px-4 py-3 border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-base font-mono focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all rounded"
-                                    aria-describedby="form3End2-desc"
-                                >
-                                <span id="form3End2-desc" class="sr-only">設定中三年級第二節考試結束時間</span>
+                                <div class="text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">第二節 SESSION 2</div>
+                                <div id="form3End2Display" 
+                                     class="py-3 px-4 border-2 border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 transition-all rounded time-input-display" 
+                                     onclick="TimePickerModal.open('form3End2')"
+                                     role="button"
+                                     tabindex="0"
+                                     aria-label="設定中三年級第二節考試結束時間">
+                                    <div class="text-base font-bold font-mono tracking-wider time-display">--:--</div>
+                                </div>
                             </div>
                         </fieldset>
 
@@ -339,7 +459,7 @@
             </section>
 
             <!-- Time Display Panel -->
-            <section class="order-1 lg:order-2" aria-labelledby="remaining-title">
+            <section class="order-2 lg:order-2" aria-labelledby="remaining-title">
                 <div class="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-xl rounded-lg">
                     <header class="bg-secondary text-white p-4 border-b-2 border-slate-300 dark:border-slate-600 rounded-t-lg">
                         <h2 id="remaining-title" class="text-xl font-bold text-center tracking-wide">
@@ -417,10 +537,9 @@
                 </div>
             </section>
 
-            <!-- Clock and Alerts Panel -->
+            <!-- Current Time Display -->
             <section class="order-3 lg:order-3">
-                <!-- Current Time Display -->
-                <div class="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-xl mb-8 rounded-lg">
+                <div class="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-xl rounded-lg">
                     <header class="bg-primary text-white p-4 border-b-2 border-blue-800 rounded-t-lg">
                         <h2 class="text-xl font-bold text-center tracking-wide">香港標準時間</h2>
                         <p class="text-center text-blue-100 text-sm mt-1">HONG KONG STANDARD TIME</p>
@@ -437,8 +556,10 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- System Alerts -->
+            </section>
+
+            <!-- System Alerts -->
+            <section class="order-4 lg:order-3">
                 <div class="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-xl rounded-lg">
                     <header class="bg-accent text-white p-4 border-b-2 border-yellow-800 rounded-t-lg">
                         <h3 class="text-xl font-bold text-center tracking-wide">系統提醒</h3>
@@ -457,6 +578,49 @@
         </div>
     </main>
 
+    <!-- Time Picker Modal -->
+    <div id="timePickerModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-content">
+            <h3 id="modal-title" class="text-xl font-bold text-center mb-4 text-slate-900 dark:text-slate-100">設定考試結束時間</h3>
+            
+            <div class="time-picker">
+                <div>
+                    <label for="hourInput" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 text-center">小時</label>
+                    <input type="number" id="hourInput" class="time-input" min="0" max="23" placeholder="HH">
+                </div>
+                
+                <div class="time-separator">:</div>
+                
+                <div>
+                    <label for="minuteInput" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 text-center">分鐘</label>
+                    <input type="number" id="minuteInput" class="time-input" min="0" max="59" placeholder="MM">
+                </div>
+            </div>
+            
+            <div class="flex gap-3 justify-center mt-6">
+                <button onclick="TimePickerModal.save()" class="bg-primary hover:bg-blue-800 text-white px-6 py-2 rounded font-medium transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                    確定
+                </button>
+                <button onclick="TimePickerModal.clear()" class="bg-warning hover:bg-yellow-600 text-white px-6 py-2 rounded font-medium transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-warning">
+                    清除
+                </button>
+                <button onclick="TimePickerModal.close()" class="bg-slate-500 hover:bg-slate-600 text-white px-6 py-2 rounded font-medium transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-slate-500">
+                    取消
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden input fields for backwards compatibility -->
+    <div style="display: none;">
+        <input type="time" id="form1End1">
+        <input type="time" id="form1End2">
+        <input type="time" id="form2End1">
+        <input type="time" id="form2End2">
+        <input type="time" id="form3End1">
+        <input type="time" id="form3End2">
+    </div>
+
     <!-- JavaScript Application -->
     <script>
         'use strict';
@@ -466,7 +630,130 @@
             alertHistory: new Set(),
             timeAlertHistory: new Set(),
             isPlayingAudio: false,
-            timers: new Map()
+            timers: new Map(),
+            examTimes: {
+                form1End1: '',
+                form1End2: '',
+                form2End1: '',
+                form2End2: '',
+                form3End1: '',
+                form3End2: ''
+            }
+        };
+
+        // Time Picker Modal
+        const TimePickerModal = {
+            currentField: null,
+            
+            open(fieldId) {
+                this.currentField = fieldId;
+                const modal = document.getElementById('timePickerModal');
+                const hourInput = document.getElementById('hourInput');
+                const minuteInput = document.getElementById('minuteInput');
+                
+                // Get current time value
+                const currentTime = AppState.examTimes[fieldId];
+                if (currentTime) {
+                    const [hours, minutes] = currentTime.split(':');
+                    hourInput.value = parseInt(hours).toString();
+                    minuteInput.value = parseInt(minutes).toString();
+                } else {
+                    hourInput.value = '';
+                    minuteInput.value = '';
+                }
+                
+                modal.classList.add('show');
+                
+                // Focus first input
+                setTimeout(() => {
+                    hourInput.focus();
+                }, 100);
+                
+                // Add keyboard listeners
+                document.addEventListener('keydown', this.handleKeyDown.bind(this));
+            },
+            
+            close() {
+                const modal = document.getElementById('timePickerModal');
+                modal.classList.remove('show');
+                this.currentField = null;
+                
+                // Remove keyboard listeners
+                document.removeEventListener('keydown', this.handleKeyDown.bind(this));
+            },
+            
+            save() {
+                const hourInput = document.getElementById('hourInput');
+                const minuteInput = document.getElementById('minuteInput');
+                
+                let hours = parseInt(hourInput.value) || 0;
+                let minutes = parseInt(minuteInput.value) || 0;
+                
+                // Validate input
+                if (hours < 0 || hours > 23) {
+                    alert('小時必須在 0-23 之間');
+                    hourInput.focus();
+                    return;
+                }
+                
+                if (minutes < 0 || minutes > 59) {
+                    alert('分鐘必須在 0-59 之間');
+                    minuteInput.focus();
+                    return;
+                }
+                
+                // Format time
+                const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                
+                // Update state and display
+                AppState.examTimes[this.currentField] = timeString;
+                document.getElementById(this.currentField).value = timeString;
+                this.updateDisplay(this.currentField);
+                
+                // Clear alert histories when time is changed
+                AppState.alertHistory.clear();
+                AppState.timeAlertHistory.clear();
+                
+                this.close();
+                
+                // Update main display
+                DisplayManager.updateDisplay();
+            },
+            
+            clear() {
+                AppState.examTimes[this.currentField] = '';
+                document.getElementById(this.currentField).value = '';
+                this.updateDisplay(this.currentField);
+                
+                // Clear alert histories
+                AppState.alertHistory.clear();
+                AppState.timeAlertHistory.clear();
+                
+                this.close();
+                
+                // Update main display
+                DisplayManager.updateDisplay();
+            },
+            
+            updateDisplay(fieldId) {
+                const displayElement = document.getElementById(fieldId + 'Display');
+                const timeDiv = displayElement.querySelector('.time-display');
+                const timeValue = AppState.examTimes[fieldId];
+                
+                if (timeValue) {
+                    timeDiv.textContent = timeValue;
+                } else {
+                    timeDiv.textContent = '--:--';
+                }
+            },
+            
+            handleKeyDown(event) {
+                if (event.key === 'Escape') {
+                    this.close();
+                } else if (event.key === 'Enter') {
+                    this.save();
+                }
+            }
         };
 
         // Utility Functions
@@ -742,8 +1029,8 @@
                         relatedForms.forEach(formInfo => {
                             const container = document.getElementById(`${formInfo.form}${formInfo.session}`);
                             if (container) {
-                                const endTimeInput = document.getElementById(`${formInfo.form}End${formInfo.sessionIndex + 1}`);
-                                const timeRemaining = TimeCalculator.calculateTimeRemaining(endTimeInput.value);
+                                const endTime = AppState.examTimes[formInfo.form + formInfo.sessionIndex + 1];
+                                const timeRemaining = TimeCalculator.calculateTimeRemaining(endTime);
                                 
                                 if (timeRemaining && !timeRemaining.ended) {
                                     let className = 'py-3 px-4 border-2 transition-all border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 rounded';
@@ -782,8 +1069,7 @@
                 
                 forms.forEach((form, formIndex) => {
                     sessions.forEach((session, sessionIndex) => {
-                        const endTimeInput = document.getElementById(`${form}End${sessionIndex + 1}`);
-                        const endTime = endTimeInput.value;
+                        const endTime = AppState.examTimes[`${form}End${sessionIndex + 1}`];
                         const timeRemaining = TimeCalculator.calculateTimeRemaining(endTime);
                         
                         if (!timeRemaining || timeRemaining.ended) return;
@@ -873,8 +1159,7 @@
                     
                     forms.forEach((form, formIndex) => {
                         sessions.forEach((session, sessionIndex) => {
-                            const endTimeInput = document.getElementById(`${form}End${sessionIndex + 1}`);
-                            const endTime = endTimeInput.value;
+                            const endTime = AppState.examTimes[`${form}End${sessionIndex + 1}`];
                             const timeRemaining = TimeCalculator.calculateTimeRemaining(endTime);
                             
                             if (!timeRemaining) return;
@@ -936,11 +1221,10 @@
                 
                 forms.forEach((form, formIndex) => {
                     sessions.forEach((session, sessionIndex) => {
-                        const endTimeInput = document.getElementById(`${form}End${sessionIndex + 1}`);
+                        const endTime = AppState.examTimes[`${form}End${sessionIndex + 1}`];
                         const timeDisplay = document.getElementById(`${form}${session}Time`);
                         const container = document.getElementById(`${form}${session}`);
                         
-                        const endTime = endTimeInput.value;
                         const timeRemaining = TimeCalculator.calculateTimeRemaining(endTime);
                         
                         if (!endTime) {
@@ -966,13 +1250,22 @@
                         }
                     });
                 });
+                
+                // Update time input displays
+                Object.keys(AppState.examTimes).forEach(fieldId => {
+                    TimePickerModal.updateDisplay(fieldId);
+                });
             }
         };
 
-        // Global Functions (for inline event handlers)
+        // Global Functions
         function resetAllTimes() {
-            const inputs = document.querySelectorAll('input[type="time"]');
-            inputs.forEach(input => input.value = '');
+            // Clear all exam times
+            Object.keys(AppState.examTimes).forEach(key => {
+                AppState.examTimes[key] = '';
+                document.getElementById(key).value = '';
+            });
+            
             AppState.alertHistory.clear();
             AppState.timeAlertHistory.clear();
             
@@ -997,14 +1290,8 @@
                 // Initialize dark mode
                 DarkMode.init();
                 
-                // Set up input event listeners
-                document.querySelectorAll('input[type="time"]').forEach(input => {
-                    input.addEventListener('change', Utils.debounce(() => {
-                        AppState.alertHistory.clear();
-                        AppState.timeAlertHistory.clear();
-                        DisplayManager.updateDisplay();
-                    }, 300));
-                });
+                // Initialize displays
+                DisplayManager.updateDisplay();
                 
                 // Start main update loop
                 setInterval(() => {
@@ -1013,8 +1300,22 @@
                     AlertChecker.checkTimeAlerts();
                 }, 1000);
                 
-                // Initial display update
-                DisplayManager.updateDisplay();
+                // Add click outside modal to close
+                document.getElementById('timePickerModal').addEventListener('click', function(event) {
+                    if (event.target === this) {
+                        TimePickerModal.close();
+                    }
+                });
+                
+                // Add keyboard support for time input displays
+                document.querySelectorAll('.time-input-display').forEach(element => {
+                    element.addEventListener('keydown', function(event) {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            this.click();
+                        }
+                    });
+                });
                 
                 console.log('考試報時提醒系統已初始化');
             } catch (error) {
@@ -1038,7 +1339,7 @@
             initApp();
         }
 
-        // Page Visibility API - pause when tab is not visible
+        // Page Visibility API
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 console.log('應用程式已暫停');
