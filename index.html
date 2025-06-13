@@ -447,17 +447,21 @@
             isPlayingAudio = true;
             
             try {
-                // 分析訊息中涉及的年級數量
+                // 分析訊息中涉及的年級
                 const forms = [];
                 if (message.includes('中一')) forms.push('中一');
                 if (message.includes('中二')) forms.push('中二');
                 if (message.includes('中三')) forms.push('中三');
                 
-                // 根據年級數量決定播放的語音文件
+                // 根據年級順序添加對應的語音文件
                 const audioFiles = [];
-                for (let i = 1; i <= forms.length; i++) {
-                    audioFiles.push(`./voice/S${i}.mp3`);
-                }
+                const formOrder = ['中一', '中二', '中三'];
+                
+                formOrder.forEach((form, index) => {
+                    if (forms.includes(form)) {
+                        audioFiles.push(`./voice/S${index + 1}.mp3`);
+                    }
+                });
                 audioFiles.push('./voice/alarm.mp3');
                 
                 // 播放兩次完整序列
