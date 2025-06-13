@@ -457,6 +457,22 @@
         </div>
     </main>
 
+    <!-- Audio Enable Button (iOS Compatibility) -->
+    <div id="audioEnableOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-slate-800 p-8 rounded-lg max-w-md mx-4 text-center">
+            <h3 class="text-xl font-bold mb-4 text-slate-900 dark:text-slate-100">啟用語音提醒</h3>
+            <p class="text-slate-600 dark:text-slate-400 mb-6">
+                為了在 iOS 設備上播放語音提醒，請點擊下方按鈕啟用音頻功能。
+            </p>
+            <button id="enableAudioBtn" class="bg-primary hover:bg-blue-700 text-white px-6 py-3 rounded font-semibold transition-colors">
+                啟用語音提醒
+            </button>
+            <button id="disableAudioBtn" class="ml-4 bg-slate-500 hover:bg-slate-600 text-white px-6 py-3 rounded font-semibold transition-colors">
+                靜音模式
+            </button>
+        </div>
+    </div>
+
     <!-- JavaScript Application -->
     <script>
         'use strict';
@@ -466,7 +482,11 @@
             alertHistory: new Set(),
             timeAlertHistory: new Set(),
             isPlayingAudio: false,
-            timers: new Map()
+            timers: new Map(),
+            audioEnabled: false,
+            audioInitialized: false,
+            audioCache: new Map(),
+            isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent)
         };
 
         // Utility Functions
@@ -563,11 +583,125 @@
             }
         };
 
+        // iOS Audio Manager
+        const IOSAudioManager = {
+            init() {
+                // Show audio enable overlay on iOS devices
+                if (AppState.isIOS) {
+                    this.showAudioEnableOverlay();
+                } else {
+                    AppState.audioEnabled = true;
+                    AppState.audioInitialized = true;
+                }
+            },
+
+            showAudioEnableOverlay() {
+                const overlay = document.getElementById('audioEnableOverlay');
+                const enableBtn = document.getElementById('enableAudioBtn');
+                const disableBtn = document.getElementById('disableAudioBtn');
+
+                overlay.classList.remove('hidden');
+
+                enableBtn.addEventListener('click', async () => {
+                    try {
+                        await this.initializeAudio();
+                        AppState.audioEnabled = true;
+                        AppState.audioInitialized = true;
+                        overlay.classList.add('hidden');
+                        console.log('iOS 音頻已啟用');
+                    } catch (error) {
+                        console.error('iOS 音頻初始化失敗:', error);
+                        AppState.audioEnabled = false;
+                        overlay.classList.add('hidden');
+                    }
+                });
+
+                disableBtn.addEventListener('click', () => {
+                    AppState.audioEnabled = false;
+                    AppState.audioInitialized = true;
+                    overlay.classList.add('hidden');
+                    console.log('iOS 靜音模式已啟用');
+                });
+            },
+
+            async initializeAudio() {
+                // Create a silent audio file to unlock iOS audio
+                const silentAudio = new Audio();
+                silentAudio.src = 'data:audio/mp3;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAATIAAAABBZD14AAIAJggDAAAeqOmk8QAAQKADhgJgA==';
+                silentAudio.preload = 'auto';
+                
+                return new Promise((resolve, reject) => {
+                    silentAudio.addEventListener('canplaythrough', () => {
+                        silentAudio.play().then(() => {
+                            console.log('iOS 音頻解鎖成功');
+                            resolve();
+                        }).catch(reject);
+                    });
+                    
+                    silentAudio.addEventListener('error', reject);
+                    silentAudio.load();
+                });
+            },
+
+            async preloadAudio() {
+                if (!AppState.audioEnabled) return;
+
+                const audioFiles = [
+                    './voice/S1.mp3',
+                    './voice/S2.mp3', 
+                    './voice/S3.mp3',
+                    './voice/alarm.mp3',
+                    './voice/15mins.mp3',
+                    './voice/5mins.mp3',
+                    './voice/end.mp3'
+                ];
+
+                const preloadPromises = audioFiles.map(src => {
+                    return new Promise((resolve) => {
+                        const audio = new Audio();
+                        audio.preload = 'auto';
+                        audio.src = src;
+                        
+                        audio.addEventListener('canplaythrough', () => {
+                            AppState.audioCache.set(src, audio);
+                            console.log(`預載音頻: ${src}`);
+                            resolve();
+                        });
+                        
+                        audio.addEventListener('error', () => {
+                            console.warn(`預載失敗: ${src}`);
+                            resolve();
+                        });
+                        
+                        audio.load();
+                    });
+                });
+
+                await Promise.all(preloadPromises);
+                console.log('音頻預載完成');
+            }
+        };
+
         // Audio System
         const AudioSystem = {
             async playAudioFile(src) {
+                if (!AppState.audioEnabled || !AppState.audioInitialized) {
+                    console.log(`音頻已禁用，跳過播放: ${src}`);
+                    return;
+                }
+
                 return new Promise((resolve) => {
-                    const audio = new Audio(src);
+                    let audio;
+                    
+                    // Use cached audio if available
+                    if (AppState.audioCache.has(src)) {
+                        audio = AppState.audioCache.get(src);
+                        // Reset to beginning
+                        audio.currentTime = 0;
+                    } else {
+                        audio = new Audio(src);
+                        audio.preload = 'auto';
+                    }
                     
                     audio.onloadeddata = () => {
                         console.log(`載入語音文件: ${src}`);
@@ -583,6 +717,11 @@
                         resolve(); // Continue even if failed
                     };
                     
+                    // iOS specific handling
+                    if (AppState.isIOS) {
+                        audio.load();
+                    }
+                    
                     audio.play().catch(error => {
                         console.error(`播放失敗: ${src}`, error);
                         resolve(); // Continue even if failed
@@ -591,7 +730,7 @@
             },
 
             async playAudioSequence(message) {
-                if (AppState.isPlayingAudio) return;
+                if (!AppState.audioEnabled || AppState.isPlayingAudio) return;
                 
                 AppState.isPlayingAudio = true;
                 
@@ -627,7 +766,7 @@
             },
 
             async playTimeAlertSequence(forms, minutes) {
-                if (AppState.isPlayingAudio) return;
+                if (!AppState.audioEnabled || AppState.isPlayingAudio) return;
                 
                 AppState.isPlayingAudio = true;
                 
@@ -986,31 +1125,50 @@
         }
 
         // Application Initialization
-        function initApp() {
+        async function initApp() {
             try {
                 // Initialize dark mode
                 DarkMode.init();
                 
+                // Initialize iOS audio manager
+                IOSAudioManager.init();
+                
+                // Preload audio files after user interaction (if enabled)
+                if (AppState.audioEnabled) {
+                    await IOSAudioManager.preloadAudio();
+                }
+                
                 // Set up input event listeners
                 document.querySelectorAll('input[type="time"]').forEach(input => {
-                    input.addEventListener('change', Utils.debounce(() => {
+                    input.addEventListener('change', Utils.debounce(async () => {
                         AppState.alertHistory.clear();
                         AppState.timeAlertHistory.clear();
                         DisplayManager.updateDisplay();
+                        
+                        // Preload audio if not already done and audio is enabled
+                        if (AppState.audioEnabled && AppState.audioCache.size === 0) {
+                            await IOSAudioManager.preloadAudio();
+                        }
                     }, 300));
                 });
                 
                 // Start main update loop
                 setInterval(() => {
                     DisplayManager.updateDisplay();
-                    AlertChecker.checkAndProcessAlerts();
-                    AlertChecker.checkTimeAlerts();
+                    
+                    // Only check alerts if audio system is initialized
+                    if (AppState.audioInitialized) {
+                        AlertChecker.checkAndProcessAlerts();
+                        AlertChecker.checkTimeAlerts();
+                    }
                 }, 1000);
                 
                 // Initial display update
                 DisplayManager.updateDisplay();
                 
                 console.log('考試報時提醒系統已初始化');
+                console.log(`設備類型: ${AppState.isIOS ? 'iOS' : '其他'}`);
+                console.log(`音頻狀態: ${AppState.audioEnabled ? '已啟用' : '已禁用'}`);
             } catch (error) {
                 console.error('應用程式初始化失敗:', error);
             }
