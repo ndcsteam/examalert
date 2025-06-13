@@ -418,6 +418,70 @@
             });
         }
 
+        // 語音播放系統
+        let isPlayingAudio = false;
+        
+        async function playAudioSequence(message) {
+            if (isPlayingAudio) return; // 防止重複播放
+            
+            isPlayingAudio = true;
+            
+            try {
+                // 分析訊息中涉及的年級數量
+                const forms = [];
+                if (message.includes('中一')) forms.push('中一');
+                if (message.includes('中二')) forms.push('中二');
+                if (message.includes('中三')) forms.push('中三');
+                
+                // 根據年級數量決定播放的語音文件
+                const audioFiles = [];
+                for (let i = 1; i <= forms.length; i++) {
+                    audioFiles.push(`./voice/S${i}.mp3`);
+                }
+                audioFiles.push('./voice/alarm.mp3');
+                
+                // 播放兩次完整序列
+                for (let round = 0; round < 2; round++) {
+                    for (const audioFile of audioFiles) {
+                        await playAudioFile(audioFile);
+                    }
+                    // 兩輪之間稍作停頓
+                    if (round === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                }
+            } catch (error) {
+                console.error('語音播放錯誤:', error);
+            } finally {
+                isPlayingAudio = false;
+            }
+        }
+        
+        function playAudioFile(src) {
+            return new Promise((resolve, reject) => {
+                const audio = new Audio(src);
+                
+                audio.onloadeddata = () => {
+                    console.log(`載入語音文件: ${src}`);
+                };
+                
+                audio.onended = () => {
+                    console.log(`播放完成: ${src}`);
+                    resolve();
+                };
+                
+                audio.onerror = (error) => {
+                    console.error(`語音文件載入失敗: ${src}`, error);
+                    resolve(); // 即使失敗也繼續播放下一個
+                };
+                
+                audio.play().catch(error => {
+                    console.error(`播放失敗: ${src}`, error);
+                    resolve(); // 即使失敗也繼續播放下一個
+                });
+            });
+        }
+
         function addAlert(message, type = 'info') {
             const alertsList = document.getElementById('alertsList');
             const placeholder = alertsList.querySelector('div');
@@ -444,6 +508,9 @@
             `;
             
             alertsList.insertBefore(alertDiv, alertsList.firstChild);
+            
+            // 播放對應的語音提醒
+            playAudioSequence(message);
         }
 
         function updateDisplay() {
