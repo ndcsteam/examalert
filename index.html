@@ -285,6 +285,7 @@
         });
 
         let alertHistory = new Set(); // 追蹤已發出的提醒
+        let timeAlertHistory = new Set(); // 追蹤已播放的時間提醒
 
         function formatTime(date) {
             return date.toLocaleTimeString('zh-HK', {
@@ -456,6 +457,48 @@
                 isPlayingAudio = false;
             }
         }
+
+        // 時間提醒語音播放系統
+        async function playTimeAlertSequence(forms, minutes) {
+            if (isPlayingAudio) return; // 防止重複播放
+            
+            isPlayingAudio = true;
+            
+            try {
+                const audioFiles = [];
+                
+                // 根據年級順序添加對應的語音文件
+                const formOrder = ['中一', '中二', '中三'];
+                let audioIndex = 1;
+                
+                formOrder.forEach(form => {
+                    if (forms.includes(form)) {
+                        audioFiles.push(`./voice/S${audioIndex}.mp3`);
+                        audioIndex++;
+                    }
+                });
+                
+                // 添加時間語音文件
+                audioFiles.push(`./voice/${minutes}mins.mp3`);
+                
+                console.log(`播放時間提醒語音: ${forms.join(' ')} ${minutes}分鐘`, audioFiles);
+                
+                // 播放兩次完整序列
+                for (let round = 0; round < 2; round++) {
+                    for (const audioFile of audioFiles) {
+                        await playAudioFile(audioFile);
+                    }
+                    // 兩輪之間稍作停頓
+                    if (round === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                }
+            } catch (error) {
+                console.error('時間提醒語音播放錯誤:', error);
+            } finally {
+                isPlayingAudio = false;
+            }
+        }
         
         function playAudioFile(src) {
             return new Promise((resolve, reject) => {
@@ -563,6 +606,7 @@
             const inputs = document.querySelectorAll('input[type="time"]');
             inputs.forEach(input => input.value = '');
             alertHistory.clear();
+            timeAlertHistory.clear(); // 清除時間提醒歷史
             
             // 清除提醒列表
             const alertsList = document.getElementById('alertsList');
@@ -584,10 +628,63 @@
             });
         });
 
+        // 檢查特定分鐘時間提醒
+        function checkTimeAlerts() {
+            const forms = ['form1', 'form2', 'form3'];
+            const formNames = ['中一', '中二', '中三'];
+            const sessions = ['Session1', 'Session2'];
+            const sessionNames = ['第一節', '第二節'];
+            
+            // 檢查的特定分鐘數
+            const specificMinutes = [15, 5];
+            
+            specificMinutes.forEach(targetMinutes => {
+                const formsAtTime = [];
+                
+                forms.forEach((form, formIndex) => {
+                    sessions.forEach((session, sessionIndex) => {
+                        const endTimeInput = document.getElementById(`${form}End${sessionIndex + 1}`);
+                        const endTime = endTimeInput.value;
+                        const timeRemaining = calculateTimeRemaining(endTime);
+                        
+                        if (!timeRemaining || timeRemaining.ended) return;
+                        
+                        // 檢查是否剛好等於目標分鐘數（允許2秒誤差）
+                        const totalMinutes = Math.floor(timeRemaining.totalSeconds / 60);
+                        const seconds = timeRemaining.totalSeconds % 60;
+                        
+                        if (totalMinutes === targetMinutes && seconds <= 2) {
+                            const formKey = `${formNames[formIndex]}-${sessionNames[sessionIndex]}`;
+                            if (!formsAtTime.some(item => item.form === formNames[formIndex])) {
+                                formsAtTime.push({
+                                    form: formNames[formIndex],
+                                    session: sessionNames[sessionIndex],
+                                    key: formKey
+                                });
+                            }
+                        }
+                    });
+                });
+                
+                // 如果有年級達到目標時間，播放語音
+                if (formsAtTime.length > 0) {
+                    const timeAlertKey = `${targetMinutes}mins-${formsAtTime.map(f => f.form).sort().join('-')}`;
+                    
+                    if (!timeAlertHistory.has(timeAlertKey)) {
+                        timeAlertHistory.add(timeAlertKey);
+                        const formsList = formsAtTime.map(f => f.form);
+                        playTimeAlertSequence(formsList, targetMinutes);
+                        console.log(`觸發時間提醒: ${formsList.join(' ')} ${targetMinutes}分鐘`);
+                    }
+                }
+            });
+        }
+
         // 每秒更新一次
         setInterval(() => {
             updateDisplay();
             checkAndProcessAlerts();
+            checkTimeAlerts();
         }, 1000);
         
         // 初始化顯示
