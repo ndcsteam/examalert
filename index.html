@@ -302,10 +302,101 @@
 </head>
 
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 min-h-screen font-sans">
-    <!-- Skip to main content for accessibility -->
-    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-white px-4 py-2 rounded">
-        跳至主要內容
-    </a>
+    <!-- Audio Permission Modal -->
+    <div id="audioPermissionModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-lg shadow-2xl max-w-md w-11/12 mx-4">
+            <header class="bg-primary text-white p-6 rounded-t-lg text-center">
+                <div class="text-6xl mb-4">🔊</div>
+                <h2 class="text-2xl font-bold tracking-wide">語音提示權限</h2>
+                <p class="text-blue-100 text-sm mt-2">AUDIO PERMISSION REQUIRED</p>
+            </header>
+            
+            <div class="p-6">
+                <div class="text-center mb-6">
+                    <h3 class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">
+                        考試報時提醒系統需要語音提示功能
+                    </h3>
+                    <div class="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-4">
+                        <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                            <strong>系統將會播放語音提示：</strong><br>
+                            • 考試時間倒數提醒（15分鐘、5分鐘）<br>
+                            • 預備收卷提醒<br>
+                            • 考試結束通知<br>
+                            • 各年級專用語音標識
+                        </p>
+                    </div>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">
+                        點擊「同意並啟動」以啟用音頻功能並進入系統
+                    </p>
+                </div>
+                
+                <div class="flex gap-3 justify-center">
+                    <button 
+                        id="allowAudioBtn"
+                        class="bg-primary hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg hover:shadow-xl focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                    >
+                        🎵 同意並啟動
+                    </button>
+                    <button 
+                        id="denyAudioBtn"
+                        class="bg-slate-500 hover:bg-slate-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg hover:shadow-xl focus:ring-2 focus:ring-offset-2 focus:ring-slate-500"
+                    >
+                        ❌ 拒絕
+                    </button>
+                </div>
+                
+                <div id="audioInitStatus" class="mt-4 text-center text-sm hidden">
+                    <div class="inline-flex items-center gap-2">
+                        <div class="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+                        <span>正在初始化音頻系統...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio Denied Modal -->
+    <div id="audioDeniedModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-slate-800 border-2 border-red-200 dark:border-red-700 rounded-lg shadow-2xl max-w-md w-11/12 mx-4">
+            <header class="bg-red-600 text-white p-6 rounded-t-lg text-center">
+                <div class="text-6xl mb-4">⚠️</div>
+                <h2 class="text-2xl font-bold tracking-wide">無法啟動系統</h2>
+                <p class="text-red-100 text-sm mt-2">SYSTEM CANNOT START</p>
+            </header>
+            
+            <div class="p-6 text-center">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">
+                    語音提示功能為必要功能
+                </h3>
+                <p class="text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
+                    考試報時提醒系統依賴語音提示來確保準確的時間通知。<br>
+                    沒有音頻功能，系統無法正常運作。
+                </p>
+                
+                <div class="flex gap-3 justify-center">
+                    <button 
+                        id="retryAudioBtn"
+                        class="bg-primary hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg hover:shadow-xl focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                    >
+                        🔄 重新嘗試
+                    </button>
+                    <button 
+                        id="exitSystemBtn"
+                        class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg hover:shadow-xl focus:ring-2 focus:ring-offset-2 focus:ring-red-600"
+                    >
+                        🚪 離開系統
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application (Initially Hidden) -->
+    <div id="mainApplication" class="hidden">
+        <!-- Skip to main content for accessibility -->
+        <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-white px-4 py-2 rounded">
+            跳至主要內容
+        </a>
 
     <!-- Header -->
     <header class="bg-primary dark:bg-slate-800 border-b-4 border-accent shadow-lg">
@@ -622,6 +713,8 @@
         <input type="time" id="form3End1">
         <input type="time" id="form3End2">
     </div>
+
+    </div> <!-- End of mainApplication div -->
 
     <!-- JavaScript Application -->
     <script>
@@ -1434,30 +1527,138 @@
             DisplayManager.updateDisplay();
         }
 
-        // Application Initialization
-        function initApp() {
+        // Audio Permission Manager
+        const AudioPermissionManager = {
+            async requestAudioPermission() {
+                return new Promise((resolve) => {
+                    const allowBtn = document.getElementById('allowAudioBtn');
+                    const denyBtn = document.getElementById('denyAudioBtn');
+                    const statusDiv = document.getElementById('audioInitStatus');
+                    
+                    // Handle allow button
+                    allowBtn.addEventListener('click', async () => {
+                        try {
+                            // Show loading status
+                            allowBtn.disabled = true;
+                            denyBtn.disabled = true;
+                            statusDiv.classList.remove('hidden');
+                            
+                            console.log('用戶同意啟用音頻功能');
+                            
+                            // 初始化 Web Audio API
+                            const audioInitSuccess = await AudioSystem.init();
+                            
+                            if (audioInitSuccess) {
+                                // 預載入音頻文件
+                                const audioFiles = [
+                                    './voice/S1.mp3',    // 中一
+                                    './voice/S2.mp3',    // 中二
+                                    './voice/S3.mp3',    // 中三
+                                    './voice/alarm.mp3', // 警報聲
+                                    './voice/15mins.mp3', // 15分鐘
+                                    './voice/5mins.mp3',  // 5分鐘
+                                    './voice/end.mp3'     // 考試結束
+                                ];
+                                
+                                await AudioSystem.preloadAudioFiles(audioFiles);
+                                
+                                // 播放測試音頻確認功能正常
+                                try {
+                                    await AudioSystem.playAudioFile('./voice/S1.mp3', 0.3);
+                                    console.log('音頻測試成功');
+                                } catch (testError) {
+                                    console.warn('音頻測試失敗，但繼續啟動系統:', testError);
+                                }
+                                
+                                resolve(true);
+                            } else {
+                                throw new Error('Web Audio API 初始化失敗');
+                            }
+                        } catch (error) {
+                            console.error('音頻初始化錯誤:', error);
+                            resolve(false);
+                        }
+                    });
+                    
+                    // Handle deny button
+                    denyBtn.addEventListener('click', () => {
+                        console.log('用戶拒絕啟用音頻功能');
+                        resolve(false);
+                    });
+                });
+            },
+
+            showPermissionModal() {
+                const modal = document.getElementById('audioPermissionModal');
+                modal.classList.remove('hidden');
+            },
+
+            hidePermissionModal() {
+                const modal = document.getElementById('audioPermissionModal');
+                modal.classList.add('hidden');
+            },
+
+            showDeniedModal() {
+                const deniedModal = document.getElementById('audioDeniedModal');
+                deniedModal.classList.remove('hidden');
+                
+                // Setup retry button
+                document.getElementById('retryAudioBtn').addEventListener('click', () => {
+                    deniedModal.classList.add('hidden');
+                    this.showPermissionModal();
+                    
+                    // Re-setup permission request (need to recreate event listeners)
+                    setTimeout(() => {
+                        this.requestAudioPermission().then(success => {
+                            if (success) {
+                                this.hidePermissionModal();
+                                this.startApplication();
+                            } else {
+                                this.hidePermissionModal();
+                                this.showDeniedModal();
+                            }
+                        });
+                    }, 100);
+                });
+                
+                // Setup exit button
+                document.getElementById('exitSystemBtn').addEventListener('click', () => {
+                    // Clear the page or redirect
+                    document.body.innerHTML = `
+                        <div class="min-h-screen bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
+                            <div class="text-center">
+                                <h1 class="text-6xl mb-4">👋</h1>
+                                <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">再見</h2>
+                                <p class="text-slate-600 dark:text-slate-400">感謝您的使用</p>
+                            </div>
+                        </div>
+                    `;
+                });
+            },
+
+            startApplication() {
+                // Hide all permission-related modals
+                this.hidePermissionModal();
+                document.getElementById('audioDeniedModal').classList.add('hidden');
+                
+                // Show main application
+                document.getElementById('mainApplication').classList.remove('hidden');
+                
+                // Initialize the main application
+                initMainApp();
+                
+                console.log('🎵 音頻權限已獲得，應用程式啟動成功');
+            }
+        };
+
+        // Main Application Initialization (after audio permission granted)
+        function initMainApp() {
             try {
                 // Initialize dark mode
                 DarkMode.init();
                 
                 // Initialize displays
                 DisplayManager.updateDisplay();
-                
-                // Preload audio files for better performance
-                const audioFiles = [
-                    './voice/S1.mp3',    // 中一
-                    './voice/S2.mp3',    // 中二
-                    './voice/S3.mp3',    // 中三
-                    './voice/alarm.mp3', // 警報聲
-                    './voice/15mins.mp3', // 15分鐘
-                    './voice/5mins.mp3',  // 5分鐘
-                    './voice/end.mp3'     // 考試結束
-                ];
-                
-                // Preload audio files in background (non-blocking)
-                setTimeout(() => {
-                    AudioSystem.preloadAudioFiles(audioFiles);
-                }, 1000);
                 
                 // Start main update loop
                 setInterval(() => {
@@ -1483,15 +1684,38 @@
                     });
                 });
                 
-                // Initialize Web Audio API on user interaction
-                document.addEventListener('click', function initAudioOnInteraction() {
-                    AudioSystem.init();
-                    document.removeEventListener('click', initAudioOnInteraction);
-                }, { once: true });
-                
-                console.log('考試報時提醒系統已初始化');
+                console.log('考試報時提醒系統主應用程式已初始化');
             } catch (error) {
-                console.error('應用程式初始化失敗:', error);
+                console.error('主應用程式初始化失敗:', error);
+            }
+        }
+
+        // Application Startup with Audio Permission
+        async function startupApplication() {
+            try {
+                console.log('🚀 啟動考試報時提醒系統...');
+                
+                // Initialize dark mode first
+                DarkMode.init();
+                
+                // Show permission modal
+                AudioPermissionManager.showPermissionModal();
+                
+                // Request audio permission
+                const permissionGranted = await AudioPermissionManager.requestAudioPermission();
+                
+                if (permissionGranted) {
+                    // Start the main application
+                    AudioPermissionManager.startApplication();
+                } else {
+                    // Show denied modal
+                    AudioPermissionManager.hidePermissionModal();
+                    AudioPermissionManager.showDeniedModal();
+                }
+                
+            } catch (error) {
+                console.error('應用程式啟動失敗:', error);
+                AudioPermissionManager.showDeniedModal();
             }
         }
 
@@ -1506,9 +1730,9 @@
 
         // Initialize when DOM is ready
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initApp);
+            document.addEventListener('DOMContentLoaded', startupApplication);
         } else {
-            initApp();
+            startupApplication();
         }
 
         // Page Visibility API
