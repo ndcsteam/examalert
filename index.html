@@ -116,6 +116,9 @@
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             font-feature-settings: "tnum";
             font-variant-numeric: tabular-nums;
+            min-height: 1.5rem;
+            display: flex;
+            align-items: center;
         }
         
         .dark .time-display {
@@ -333,7 +336,7 @@
             
             <!-- Time Configuration Panel -->
             <section class="order-1 lg:order-1" aria-labelledby="config-title">
-                <div class="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-xl rounded-lg">
+                <div class="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-xl rounded-lg h-full">
                     <header class="bg-secondary text-white p-4 border-b-2 border-slate-300 dark:border-slate-600 rounded-t-lg">
                         <h2 id="config-title" class="text-xl font-bold text-center tracking-wide">
                             考試時間設定
@@ -345,8 +348,7 @@
                     
                     <div class="p-6">
                         <!-- Form 1 Configuration -->
-                        <fieldset class="mb-8">
-                            <legend class="sr-only">中一年級時間設定</legend>
+                        <div class="mb-8">
                             <div class="bg-slate-100 dark:bg-slate-700 p-3 mb-4 border-l-4 border-primary rounded">
                                 <h3 class="text-lg font-bold text-primary dark:text-blue-300">
                                     中一年級 FORM 1
@@ -376,11 +378,10 @@
                                     <div class="text-base font-bold font-mono tracking-wider time-display">--:--</div>
                                 </div>
                             </div>
-                        </fieldset>
+                        </div>
 
                         <!-- Form 2 Configuration -->
-                        <fieldset class="mb-8">
-                            <legend class="sr-only">中二年級時間設定</legend>
+                        <div class="mb-8">
                             <div class="bg-slate-100 dark:bg-slate-700 p-3 mb-4 border-l-4 border-primary rounded">
                                 <h3 class="text-lg font-bold text-primary dark:text-blue-300">
                                     中二年級 FORM 2
@@ -410,11 +411,10 @@
                                     <div class="text-base font-bold font-mono tracking-wider time-display">--:--</div>
                                 </div>
                             </div>
-                        </fieldset>
+                        </div>
 
                         <!-- Form 3 Configuration -->
-                        <fieldset class="mb-8">
-                            <legend class="sr-only">中三年級時間設定</legend>
+                        <div class="mb-8">
                             <div class="bg-slate-100 dark:bg-slate-700 p-3 mb-4 border-l-4 border-primary rounded">
                                 <h3 class="text-lg font-bold text-primary dark:text-blue-300">
                                     中三年級 FORM 3
@@ -444,23 +444,14 @@
                                     <div class="text-base font-bold font-mono tracking-wider time-display">--:--</div>
                                 </div>
                             </div>
-                        </fieldset>
-
-                        <button 
-                            onclick="resetAllTimes()" 
-                            class="w-full bg-secondary hover:bg-slate-600 text-white py-3 px-6 font-semibold tracking-wide uppercase transition-colors border-2 border-secondary hover:border-slate-600 rounded focus:ring-2 focus:ring-offset-2 focus:ring-secondary"
-                            aria-describedby="reset-desc"
-                        >
-                            重置所有設定 RESET ALL
-                        </button>
-                        <span id="reset-desc" class="sr-only">清除所有時間設定</span>
+                        </div>
                     </div>
                 </div>
             </section>
 
             <!-- Time Display Panel -->
             <section class="order-1 lg:order-2" aria-labelledby="remaining-title">
-                <div class="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-xl rounded-lg">
+                <div class="bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-xl rounded-lg h-full">
                     <header class="bg-secondary text-white p-4 border-b-2 border-slate-300 dark:border-slate-600 rounded-t-lg">
                         <h2 id="remaining-title" class="text-xl font-bold text-center tracking-wide">
                             剩餘時間
@@ -474,7 +465,7 @@
                         <!-- Form 1 Times -->
                         <div class="mb-8">
                             <div class="bg-slate-100 dark:bg-slate-700 p-3 mb-4 border-l-4 border-primary rounded">
-                                <h3 class="text-lg font-bold text-primary dark:text-blue-300">中一年級</h3>
+                                <h3 class="text-lg font-bold text-primary dark:text-blue-300">中一年級 FORM 1</h3>
                             </div>
                             
                             <div class="mb-4">
@@ -495,7 +486,7 @@
                         <!-- Form 2 Times -->
                         <div class="mb-8">
                             <div class="bg-slate-100 dark:bg-slate-700 p-3 mb-4 border-l-4 border-primary rounded">
-                                <h3 class="text-lg font-bold text-primary dark:text-blue-300">中二年級</h3>
+                                <h3 class="text-lg font-bold text-primary dark:text-blue-300">中二年級 FORM 2</h3>
                             </div>
                             
                             <div class="mb-4">
@@ -514,9 +505,9 @@
                         </div>
 
                         <!-- Form 3 Times -->
-                        <div class="mb-6">
+                        <div class="mb-8">
                             <div class="bg-slate-100 dark:bg-slate-700 p-3 mb-4 border-l-4 border-primary rounded">
-                                <h3 class="text-lg font-bold text-primary dark:text-blue-300">中三年級</h3>
+                                <h3 class="text-lg font-bold text-primary dark:text-blue-300">中三年級 FORM 3</h3>
                             </div>
                             
                             <div class="mb-4">
@@ -574,6 +565,18 @@
                     </div>
                 </div>
             </section>
+        </div>
+        
+        <!-- Reset Button Section -->
+        <div class="mt-8 text-center">
+            <button 
+                onclick="resetAllTimes()" 
+                class="bg-secondary hover:bg-slate-600 text-white py-3 px-8 font-semibold tracking-wide uppercase transition-colors border-2 border-secondary hover:border-slate-600 rounded-lg shadow-lg hover:shadow-xl focus:ring-2 focus:ring-offset-2 focus:ring-secondary"
+                aria-describedby="reset-desc"
+            >
+                重置所有設定 RESET ALL
+            </button>
+            <span id="reset-desc" class="sr-only">清除所有時間設定</span>
         </div>
     </main>
 
