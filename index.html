@@ -684,7 +684,7 @@
                 document.removeEventListener('keydown', this.handleKeyDown.bind(this));
             },
             
-            save() {
+            async save() {
                 const hourInput = document.getElementById('hourInput');
                 const minuteInput = document.getElementById('minuteInput');
                 
@@ -706,6 +706,30 @@
                 
                 // Format time
                 const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                
+                // 🎵 Initialize Web Audio API on user interaction (critical for mobile devices)
+                try {
+                    const audioInitialized = await AudioSystem.init();
+                    if (audioInitialized) {
+                        console.log('✅ Web Audio API 已在時間設定時初始化');
+                        
+                        // Start preloading audio files if not already done
+                        const audioFiles = [
+                            './voice/S1.mp3',    // 中一
+                            './voice/S2.mp3',    // 中二
+                            './voice/S3.mp3',    // 中三
+                            './voice/alarm.mp3', // 警報聲
+                            './voice/15mins.mp3', // 15分鐘
+                            './voice/5mins.mp3',  // 5分鐘
+                            './voice/end.mp3'     // 考試結束
+                        ];
+                        
+                        // Non-blocking preload
+                        AudioSystem.preloadAudioFiles(audioFiles);
+                    }
+                } catch (error) {
+                    console.warn('音頻初始化失敗，但不影響時間設定:', error);
+                }
                 
                 // Update state and display
                 AppState.examTimes[this.currentField] = timeString;
