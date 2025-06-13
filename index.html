@@ -852,39 +852,146 @@
             }
         };
 
-        // Audio System
+        // Web Audio API System
         const AudioSystem = {
-            async playAudioFile(src) {
+            audioContext: null,
+            audioBuffers: new Map(),
+            isInitialized: false,
+
+            // 初始化Web Audio API
+            async init() {
+                if (this.isInitialized) return true;
+
+                try {
+                    // 創建AudioContext
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // 如果AudioContext被暫停，嘗試恢復
+                    if (this.audioContext.state === 'suspended') {
+                        await this.audioContext.resume();
+                    }
+                    
+                    console.log('Web Audio API 初始化成功');
+                    this.isInitialized = true;
+                    return true;
+                } catch (error) {
+                    console.error('Web Audio API 初始化失敗:', error);
+                    return false;
+                }
+            },
+
+            // 載入並解碼音頻文件
+            async loadAudioFile(url) {
+                if (this.audioBuffers.has(url)) {
+                    return this.audioBuffers.get(url);
+                }
+
+                try {
+                    console.log(`載入音頻文件: ${url}`);
+                    const response = await fetch(url);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const arrayBuffer = await response.arrayBuffer();
+                    const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+                    
+                    // 緩存解碼後的音頻
+                    this.audioBuffers.set(url, audioBuffer);
+                    console.log(`音頻文件載入完成: ${url}`);
+                    
+                    return audioBuffer;
+                } catch (error) {
+                    console.error(`載入音頻文件失敗 ${url}:`, error);
+                    return null;
+                }
+            },
+
+            // 播放單個音頻文件
+            async playAudioBuffer(audioBuffer, volume = 1.0) {
+                if (!audioBuffer || !this.audioContext) return;
+
                 return new Promise((resolve) => {
-                    const audio = new Audio(src);
-                    
-                    audio.onloadeddata = () => {
-                        console.log(`載入語音文件: ${src}`);
-                    };
-                    
-                    audio.onended = () => {
-                        console.log(`播放完成: ${src}`);
+                    try {
+                        // 創建音頻源節點
+                        const source = this.audioContext.createBufferSource();
+                        source.buffer = audioBuffer;
+                        
+                        // 創建增益節點控制音量
+                        const gainNode = this.audioContext.createGain();
+                        gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
+                        
+                        // 連接節點：source -> gainNode -> destination
+                        source.connect(gainNode);
+                        gainNode.connect(this.audioContext.destination);
+                        
+                        // 播放結束回調
+                        source.onended = () => {
+                            source.disconnect();
+                            gainNode.disconnect();
+                            resolve();
+                        };
+                        
+                        // 開始播放
+                        source.start(0);
+                        
+                    } catch (error) {
+                        console.error('播放音頻失敗:', error);
                         resolve();
-                    };
-                    
-                    audio.onerror = (error) => {
-                        console.error(`語音文件載入失敗: ${src}`, error);
-                        resolve(); // Continue even if failed
-                    };
-                    
-                    audio.play().catch(error => {
-                        console.error(`播放失敗: ${src}`, error);
-                        resolve(); // Continue even if failed
-                    });
+                    }
                 });
             },
 
+            // 播放音頻文件（帶載入）
+            async playAudioFile(src, volume = 1.0) {
+                try {
+                    // 確保Web Audio API已初始化
+                    if (!await this.init()) {
+                        console.warn('Web Audio API 不可用，跳過音頻播放');
+                        return;
+                    }
+
+                    // 載入音頻文件
+                    const audioBuffer = await this.loadAudioFile(src);
+                    if (!audioBuffer) {
+                        console.warn(`跳過無效音頻文件: ${src}`);
+                        return;
+                    }
+
+                    // 播放音頻
+                    await this.playAudioBuffer(audioBuffer, volume);
+                    console.log(`播放完成: ${src}`);
+                    
+                } catch (error) {
+                    console.error(`播放音頻文件失敗 ${src}:`, error);
+                }
+            },
+
+            // 預載入音頻文件
+            async preloadAudioFiles(urls) {
+                if (!await this.init()) return;
+
+                const loadPromises = urls.map(url => this.loadAudioFile(url));
+                const results = await Promise.allSettled(loadPromises);
+                
+                const successCount = results.filter(result => result.status === 'fulfilled' && result.value).length;
+                console.log(`預載入完成: ${successCount}/${urls.length} 個音頻文件`);
+            },
+
+            // 播放考試提醒音頻序列
             async playAudioSequence(message) {
                 if (AppState.isPlayingAudio) return;
                 
                 AppState.isPlayingAudio = true;
                 
                 try {
+                    // 確保Web Audio API已初始化
+                    if (!await this.init()) {
+                        console.warn('Web Audio API 不可用，跳過音頻播放');
+                        return;
+                    }
+
                     const forms = [];
                     if (message.includes('中一')) forms.push('中一');
                     if (message.includes('中二')) forms.push('中二');
@@ -900,27 +1007,38 @@
                     });
                     audioFiles.push('./voice/alarm.mp3');
                     
+                    console.log(`播放考試提醒音頻序列:`, audioFiles);
+                    
+                    // 播放兩輪
                     for (let round = 0; round < 2; round++) {
                         for (const audioFile of audioFiles) {
-                            await this.playAudioFile(audioFile);
+                            await this.playAudioFile(audioFile, 0.8); // 稍微降低音量
                         }
+                        // 兩輪之間的間隔
                         if (round === 0) {
                             await new Promise(resolve => setTimeout(resolve, 500));
                         }
                     }
                 } catch (error) {
-                    console.error('語音播放錯誤:', error);
+                    console.error('考試提醒語音播放錯誤:', error);
                 } finally {
                     AppState.isPlayingAudio = false;
                 }
             },
 
+            // 播放時間提醒音頻序列
             async playTimeAlertSequence(forms, minutes) {
                 if (AppState.isPlayingAudio) return;
                 
                 AppState.isPlayingAudio = true;
                 
                 try {
+                    // 確保Web Audio API已初始化
+                    if (!await this.init()) {
+                        console.warn('Web Audio API 不可用，跳過音頻播放');
+                        return;
+                    }
+
                     const audioFiles = [];
                     const formOrder = ['中一', '中二', '中三'];
                     
@@ -938,10 +1056,12 @@
                     
                     console.log(`播放時間提醒語音: ${forms.join(' ')} ${minutes === 0 ? '考試結束' : minutes + '分鐘'}`, audioFiles);
                     
+                    // 播放兩輪
                     for (let round = 0; round < 2; round++) {
                         for (const audioFile of audioFiles) {
-                            await this.playAudioFile(audioFile);
+                            await this.playAudioFile(audioFile, 0.9); // 稍微降低音量
                         }
+                        // 兩輪之間的間隔
                         if (round === 0) {
                             await new Promise(resolve => setTimeout(resolve, 500));
                         }
@@ -951,6 +1071,34 @@
                 } finally {
                     AppState.isPlayingAudio = false;
                 }
+            },
+
+            // 停止所有音頻播放
+            stopAll() {
+                if (this.audioContext && this.audioContext.state !== 'closed') {
+                    try {
+                        // 暫停AudioContext來停止所有播放
+                        this.audioContext.suspend();
+                        AppState.isPlayingAudio = false;
+                        console.log('已停止所有音頻播放');
+                    } catch (error) {
+                        console.error('停止音頻播放失敗:', error);
+                    }
+                }
+            },
+
+            // 清理資源
+            cleanup() {
+                this.stopAll();
+                this.audioBuffers.clear();
+                
+                if (this.audioContext && this.audioContext.state !== 'closed') {
+                    this.audioContext.close();
+                }
+                
+                this.audioContext = null;
+                this.isInitialized = false;
+                console.log('Web Audio API 資源已清理');
             }
         };
 
@@ -1295,6 +1443,22 @@
                 // Initialize displays
                 DisplayManager.updateDisplay();
                 
+                // Preload audio files for better performance
+                const audioFiles = [
+                    './voice/S1.mp3',    // 中一
+                    './voice/S2.mp3',    // 中二
+                    './voice/S3.mp3',    // 中三
+                    './voice/alarm.mp3', // 警報聲
+                    './voice/15mins.mp3', // 15分鐘
+                    './voice/5mins.mp3',  // 5分鐘
+                    './voice/end.mp3'     // 考試結束
+                ];
+                
+                // Preload audio files in background (non-blocking)
+                setTimeout(() => {
+                    AudioSystem.preloadAudioFiles(audioFiles);
+                }, 1000);
+                
                 // Start main update loop
                 setInterval(() => {
                     DisplayManager.updateDisplay();
@@ -1318,6 +1482,12 @@
                         }
                     });
                 });
+                
+                // Initialize Web Audio API on user interaction
+                document.addEventListener('click', function initAudioOnInteraction() {
+                    AudioSystem.init();
+                    document.removeEventListener('click', initAudioOnInteraction);
+                }, { once: true });
                 
                 console.log('考試報時提醒系統已初始化');
             } catch (error) {
