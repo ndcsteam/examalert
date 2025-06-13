@@ -567,16 +567,36 @@
             </section>
         </div>
         
-        <!-- Reset Button Section -->
-        <div class="mt-8 text-center">
-            <button 
-                onclick="resetAllTimes()" 
-                class="bg-secondary hover:bg-slate-600 text-white py-3 px-8 font-semibold tracking-wide uppercase transition-colors border-2 border-secondary hover:border-slate-600 rounded-lg shadow-lg hover:shadow-xl focus:ring-2 focus:ring-offset-2 focus:ring-secondary"
-                aria-describedby="reset-desc"
-            >
-                重置所有設定 RESET ALL
-            </button>
-            <span id="reset-desc" class="sr-only">清除所有時間設定</span>
+        <!-- Control Buttons Section -->
+        <div class="mt-8 text-center space-y-4">
+            <!-- Audio Test Button -->
+            <div>
+                <button 
+                    onclick="testAudioSystem()" 
+                    class="bg-accent hover:bg-yellow-600 text-white py-3 px-8 font-semibold tracking-wide uppercase transition-colors border-2 border-accent hover:border-yellow-600 rounded-lg shadow-lg hover:shadow-xl focus:ring-2 focus:ring-offset-2 focus:ring-accent mr-4"
+                    aria-describedby="audio-test-desc"
+                >
+                    🎵 測試音效系統 TEST AUDIO
+                </button>
+                <span id="audio-test-desc" class="sr-only">測試音效播放功能</span>
+                
+                <!-- Audio Status Indicator -->
+                <div id="audioStatus" class="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                    <span id="audioStatusText">音效系統：未初始化</span>
+                </div>
+            </div>
+            
+            <!-- Reset Button -->
+            <div>
+                <button 
+                    onclick="resetAllTimes()" 
+                    class="bg-secondary hover:bg-slate-600 text-white py-3 px-8 font-semibold tracking-wide uppercase transition-colors border-2 border-secondary hover:border-slate-600 rounded-lg shadow-lg hover:shadow-xl focus:ring-2 focus:ring-offset-2 focus:ring-secondary"
+                    aria-describedby="reset-desc"
+                >
+                    重置所有設定 RESET ALL
+                </button>
+                <span id="reset-desc" class="sr-only">清除所有時間設定</span>
+            </div>
         </div>
     </main>
 
@@ -1431,6 +1451,109 @@
                 });
             }
         };
+
+        // Audio Status Manager
+        const AudioStatusManager = {
+            updateStatus(message, isError = false) {
+                const statusElement = document.getElementById('audioStatusText');
+                if (statusElement) {
+                    statusElement.textContent = message;
+                    statusElement.className = isError ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400';
+                }
+            }
+        };
+
+        // Audio Test Function
+        async function testAudioSystem() {
+            const button = event.target;
+            const originalText = button.textContent;
+            
+            try {
+                button.disabled = true;
+                button.textContent = '🎵 測試中...';
+                AudioStatusManager.updateStatus('正在測試音效系統...');
+                
+                console.log('=== 開始音效系統測試 ===');
+                
+                // 1. 初始化 Web Audio API
+                const initSuccess = await AudioSystem.init();
+                if (!initSuccess) {
+                    throw new Error('Web Audio API 初始化失敗');
+                }
+                
+                console.log('✅ Web Audio API 初始化成功');
+                AudioStatusManager.updateStatus('Web Audio API 初始化成功');
+                
+                // 2. 測試音頻文件載入
+                const testFiles = [
+                    './voice/S1.mp3',
+                    './voice/alarm.mp3'
+                ];
+                
+                AudioStatusManager.updateStatus('正在載入測試音頻...');
+                
+                let loadedCount = 0;
+                for (const file of testFiles) {
+                    try {
+                        const buffer = await AudioSystem.loadAudioFile(file);
+                        if (buffer) {
+                            loadedCount++;
+                            console.log(`✅ 載入成功: ${file}`);
+                        } else {
+                            console.warn(`⚠️ 載入失敗: ${file}`);
+                        }
+                    } catch (error) {
+                        console.error(`❌ 載入錯誤 ${file}:`, error);
+                    }
+                }
+                
+                AudioStatusManager.updateStatus(`載入 ${loadedCount}/${testFiles.length} 個測試音頻`);
+                
+                // 3. 播放測試序列
+                if (loadedCount > 0) {
+                    AudioStatusManager.updateStatus('播放測試音效...');
+                    
+                    // 播放中一年級音效
+                    await AudioSystem.playAudioFile('./voice/S1.mp3', 0.6);
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    
+                    // 播放警報聲
+                    await AudioSystem.playAudioFile('./voice/alarm.mp3', 0.6);
+                    
+                    console.log('✅ 音效播放測試完成');
+                    AudioStatusManager.updateStatus('✅ 音效系統測試成功！');
+                    
+                    // 顯示成功訊息
+                    setTimeout(() => {
+                        AudioStatusManager.updateStatus(`音效系統：已初始化 (${AudioSystem.audioBuffers.size} 個音頻檔案)`);
+                    }, 3000);
+                    
+                } else {
+                    throw new Error('無法載入任何音頻文件');
+                }
+                
+            } catch (error) {
+                console.error('❌ 音效系統測試失敗:', error);
+                AudioStatusManager.updateStatus(`❌ 測試失敗: ${error.message}`, true);
+                
+                // 提供診斷建議
+                if (error.message.includes('Web Audio API')) {
+                    console.log('建議: 請確保瀏覽器支援 Web Audio API');
+                } else if (error.message.includes('音頻文件')) {
+                    console.log('建議: 請檢查音頻文件路徑和格式');
+                } else {
+                    console.log('建議: 請檢查網絡連接和瀏覽器設定');
+                }
+                
+                setTimeout(() => {
+                    AudioStatusManager.updateStatus('音效系統：測試失敗', true);
+                }, 3000);
+                
+            } finally {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
 
         // Global Functions
         function resetAllTimes() {
